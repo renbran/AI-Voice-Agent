@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>James Voice Agent - HTTPS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .voice-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 2rem;
+        }
+        
+        .voice-button:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .voice-button.listening {
+            background: linear-gradient(145deg, #4ecdc4, #44a08d);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .voice-button.processing {
+            background: linear-gradient(145deg, #ffa726, #ff8f00);
+        }
+        
+        .voice-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .status {
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            min-height: 1.5rem;
+        }
+        
+        .conversation {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 10px;
+            max-width: 90%;
+        }
+        
+        .user-message {
+            background: rgba(255,255,255,0.2);
+            margin-left: auto;
+            text-align: right;
+            color: white;
+        }
+        
+        .ai-message {
+            background: rgba(0,0,0,0.3);
+            margin-right: auto;
+            color: white;
+        }
+        
+        .menu-info {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+        
+        .menu-info h3 {
+            margin-bottom: 0.5rem;
+            color: #ffd700;
+        }
+        
+        .menu-item {
+            padding: 0.3rem 0;
+            opacity: 0.9;
+        }
+        
+        .permission-prompt {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 2rem;
+            display: none;
+        }
+        
+        .permission-button {
+            background: linear-gradient(145deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .voice-button {
+                width: 150px;
+                height: 150px;
+                font-size: 1rem;
+            }
+            
+            .conversation {
+                margin: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎤 James Voice Agent</h1>
+        <p>HTTPS - Voice Wake Up Enabled</p>
+    </div>
+    
+    <div class="permission-prompt" id="permissionPrompt">
+        <h3>🎤 Microphone Access Required</h3>
+        <p>James needs microphone access to hear your voice commands.</p>
+        <button class="permission-button" onclick="requestPermission()">Enable Microphone</button>
+    </div>
+    
+    <button id="voiceButton" class="voice-button">
+        <div style="font-size: 3rem;">🎤</div>
+        <div>Tap to Start</div>
+    </button>
+    
+    <div class="status" id="status">Tap the microphone to begin</div>
+    
+    <div class="conversation" id="conversation">
+        <div class="ai-message">
+            <strong>James:</strong> Hello! I'm James, your restaurant assistant. Say "Hey James" to activate me, or tap the microphone to start talking directly.
+        </div>
+        
+        <div class="menu-info">
+            <h3>📋 Menu Available</h3>
+            <div class="menu-item">🥟 Roast Pork Egg Roll (3pcs) - $5.25</div>
+            <div class="menu-item">🥬 Vegetable Spring Roll (3pcs) - $5.25</div>
+            <div class="menu-item">🐔 Chicken Egg Roll (3pcs) - $5.25</div>
+            <div class="menu-item">🍗 BBQ Chicken - $7.75</div>
+        </div>
+    </div>
+
+    <script>
+        const voiceButton = document.getElementById('voiceButton');
+        const status = document.getElementById('status');
+        const conversation = document.getElementById('conversation');
+        const permissionPrompt = document.getElementById('permissionPrompt');
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let permissionGranted = false;
+        let wakeWordMode = false;
+        
+        // Check for microphone support on load
+        window.addEventListener('load', () => {
+            checkMicrophoneSupport();
+        });
+        
+        function checkMicrophoneSupport() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                status.textContent = 'Microphone not supported in this browser';
+                voiceButton.innerHTML = '<div style="font-size: 3rem;">🚫</div><div>Not Supported</div>';
+                voiceButton.disabled = true;
+                return;
+            }
+            
+            // Show permission prompt
+            permissionPrompt.style.display = 'block';
+        }
+        
+        async function requestPermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                // Permission granted - stop the stream and hide prompt
+                stream.getTracks().forEach(track => track.stop());
+                permissionGranted = true;
+                permissionPrompt.style.display = 'none';
+                
+                voiceButton.innerHTML = '<div style="font-size: 3rem;">👂</div><div>Say "Hey James"</div>';
+                status.textContent = 'Say "Hey James" to activate, or tap to talk directly';
+                
+                // Start wake word listening
+                startWakeWordMode();
+                
+            } catch (error) {
+                console.error('Permission error:', error);
+                handlePermissionError(error);
+            }
+        }
+        
+        function handlePermissionError(error) {
+            let message = '';
+            
+            if (error.name === 'NotAllowedError') {
+                message = 'Microphone permission denied. Please allow access and try again.';
+            } else if (error.name === 'NotFoundError') {
+                message = 'No microphone found on this device.';
+            } else {
+                message = 'Error accessing microphone: ' + error.message;
+            }
+            
+            status.textContent = message;
+            permissionPrompt.innerHTML = `
+                <h3>🚫 Microphone Error</h3>
+                <p>${message}</p>
+                <button class="permission-button" onclick="location.reload()">Try Again</button>
+            `;
+        }
+        
+        let wakeWordInterval;
+        
+        function startWakeWordMode() {
+            if (!permissionGranted) return;
+            
+            wakeWordMode = true;
+            voiceButton.className = 'voice-button listening';
+            voiceButton.innerHTML = '<div style="font-size: 3rem;">👂</div><div>Listening for "Hey James"</div>';
+            status.textContent = 'Listening for wake word...';
+            
+            // Listen for wake word every 3 seconds
+            listenForWakeWord();
+            wakeWordInterval = setInterval(listenForWakeWord, 4000);
+        }
+        
+        async function listenForWakeWord() {
+            if (!wakeWordMode) return;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+                });
+                
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                        try {
+                            const response = await fetch('/wake_word_check', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ audio: reader.result })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.detected) {
+                                clearInterval(wakeWordInterval);
+                                wakeWordMode = false;
+                                
+                                voiceButton.className = 'voice-button processing';
+                                voiceButton.innerHTML = '<div style="font-size: 3rem;">✅</div><div>Activated!</div>';
+                                status.textContent = 'James activated! Start speaking...';
+                                
+                                addMessage('system', 'Wake word detected! James is now listening...');
+                                
+                                // Wait a moment then start conversation
+                                setTimeout(() => {
+                                    startDirectConversation();
+                                }, 1500);
+                            }
+                        } catch (error) {
+                            console.error('Wake word check error:', error);
+                        }
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                
+                // Record for 3 seconds
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Wake word listening error:', error);
+            }
+        }
+        
+        voiceButton.addEventListener('click', () => {
+            if (!permissionGranted) {
+                requestPermission();
+                return;
+            }
+            
+            if (wakeWordMode) {
+                // Stop wake word mode and start direct conversation
+                clearInterval(wakeWordInterval);
+                wakeWordMode = false;
+                startDirectConversation();
+            } else {
+                if (!isRecording) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            }
+        });
+        
+        function startDirectConversation() {
+            voiceButton.innerHTML = '<div style="font-size: 3rem;">🎤</div><div>Tap to Talk</div>';
+            voiceButton.className = 'voice-button';
+            status.textContent = 'Tap the microphone to start talking';
+        }
+        
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+                });
+                
+                audioChunks = [];
+                isRecording = true;
+                
+                voiceButton.className = 'voice-button listening';
+                voiceButton.innerHTML = '<div style="font-size: 3rem;">🔴</div><div>Recording...</div>';
+                status.textContent = 'Speak now...';
+                
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                        try {
+                            voiceButton.className = 'voice-button processing';
+                            voiceButton.innerHTML = '<div style="font-size: 3rem;">⏳</div><div>Processing...</div>';
+                            status.textContent = 'Processing your request...';
+                            
+                            const response = await fetch('/voice_chat', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ audio: reader.result })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.transcript) {
+                                addMessage('user', result.transcript);
+                            }
+                            
+                            if (result.response) {
+                                addMessage('ai', result.response);
+                                
+                                // Play audio response if available
+                                if (result.audio) {
+                                    const audio = new Audio(result.audio);
+                                    audio.play();
+                                }
+                            }
+                            
+                            // Return to wake word mode after conversation
+                            setTimeout(() => {
+                                startWakeWordMode();
+                            }, 3000);
+                            
+                        } catch (error) {
+                            console.error('Voice chat error:', error);
+                            status.textContent = 'Error processing request';
+                            addMessage('system', 'Error processing your request. Please try again.');
+                            
+                            setTimeout(() => {
+                                startWakeWordMode();
+                            }, 3000);
+                        }
+                    };
+                    reader.readAsDataURL(audioBlob);
+                    
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                
+            } catch (error) {
+                console.error('Recording error:', error);
+                status.textContent = 'Error starting recording: ' + error.message;
+                isRecording = false;
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                isRecording = false;
+            }
+        }
+        
+        function addMessage(sender, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = sender === 'user' ? 'user-message' : (sender === 'ai' ? 'ai-message' : 'ai-message');
+            messageDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : (sender === 'ai' ? 'James' : 'System')}:</strong> ${message}`;
+            
+            conversation.appendChild(messageDiv);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+    </script>
+</body>
+</html>

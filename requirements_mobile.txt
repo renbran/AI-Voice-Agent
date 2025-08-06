@@ -1,0 +1,10 @@
+# Mobile Web App Requirements
+flask==3.0.0
+flask-socketio==5.3.6
+eventlet==0.35.2
+
+# Core requirements from original app
+openai==1.99.0
+deepgram-sdk==4.8.1
+requests==2.32.4
+python-dotenv==1.1.1
